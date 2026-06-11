@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Japanese SRS Browser Trainer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f3ed;
+      --panel: #fffdf8;
+      --surface: #ffffff;
+      --text: #191714;
+      --muted: #6c665c;
+      --accent: #0e7c86;
+      --accent-soft: #dff3f4;
+      --ok: #17603a;
+      --bad: #b3261e;
+      --warn: #a15c00;
+      --border: #ddd6c9;
+      --shadow: 0 22px 60px rgba(40, 32, 20, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 22px;
+      font-family: "Noto Sans JP", "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+      background:
+        linear-gradient(120deg, rgba(14,124,134,.12), transparent 36%),
+        linear-gradient(300deg, rgba(161,92,0,.13), transparent 32%),
+        var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: start;
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(22px, 3vw, 34px);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto;
+      gap: 14px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.58);
+    }
+
+    .file-block, .settings {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input[type="file"] {
+      max-width: 100%;
+      font-size: 14px;
+    }
+
+    label {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    select, input[type="number"] {
+      min-height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+      padding: 6px 9px;
+    }
+
+    input[type="number"] { width: 74px; }
+
+    .btn {
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 8px 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn:hover { filter: brightness(.96); }
+    .btn:disabled { cursor: not-allowed; opacity: .55; }
+
+    .btn.secondary {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn.danger {
+      background: #fff4f1;
+      color: var(--bad);
+      border-color: #efc9c2;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat {
+      min-height: 68px;
+      padding: 13px 16px;
+      background: var(--surface);
+    }
+
+    .stat-value {
+      display: block;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat-label {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    main {
+      padding: 22px 24px 24px;
+    }
+
+    #statusLine {
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .topStats {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 12px 0 10px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .word {
+      min-height: 150px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 18px;
+      margin: 0 0 18px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(255,255,255,.95), rgba(255,255,255,.6) 42%, rgba(223,243,244,.6)),
+        var(--surface);
+      font-size: clamp(46px, 9vw, 120px);
+      font-weight: 800;
+      line-height: 1.05;
+      overflow-wrap: anywhere;
+    }
+
+    #answer {
+      width: 100%;
+      min-height: 66px;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: clamp(24px, 4vw, 40px);
+      outline: none;
+    }
+
+    #answer:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    #feedback {
+      min-height: 34px;
+      margin-top: 16px;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    #feedback.ok { color: var(--ok); }
+    #feedback.bad { color: var(--bad); }
+    #feedback.warn { color: var(--warn); }
+
+    #details {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .detail {
+      min-height: 76px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      font-size: 17px;
+      line-height: 1.45;
+    }
+
+    .detail strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    #sessionStats, #finalStats {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    #finalStats {
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 860px) {
+      body { padding: 12px; }
+      header, .toolbar {
+        grid-template-columns: 1fr;
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      main { padding: 16px; }
+      #details { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .word { min-height: 120px; font-size: clamp(38px, 16vw, 82px); }
+      .topStats { flex-direction: column; gap: 4px; }
+      label { white-space: normal; }
+      .btn { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Japanese SRS Trainer</h1>
+      <div class="muted">Load one of your CSV files, type the reading, then press Enter. Missed cards repeat until they stick.</div>
+    </div>
+    <button id="resetProgressBtn" class="btn danger">Reset file progress</button>
+  </header>
+
+  <section class="toolbar" aria-label="File and study settings">
+    <div class="file-block">
+      <input id="csvFile" type="file" accept=".csv,text/csv">
+      <button id="startBtn" class="btn">Load CSV</button>
+      <span id="fileInfo" class="muted"></span>
+    </div>
+    <div class="settings">
+      <label>Session
+        <input id="sessionLimit" type="number" min="5" max="100" step="5" value="15">
+      </label>
+      <label>Study
+        <select id="studyMode">
+          <option value="due">Due cards</option>
+          <option value="all">All cards</option>
+          <option value="new">New cards</option>
+        </select>
+      </label>
+      <label>
+        <input id="includeKanaOnly" type="checkbox" checked>
+        Kana-only words
+      </label>
+      <label>
+        <input id="includeKatakana" type="checkbox">
+        Katakana words
+      </label>
+    </div>
+  </section>
+
+  <section class="stats-grid" aria-label="Deck summary">
+    <div class="stat"><span id="totalCount" class="stat-value">0</span><span class="stat-label">Loaded</span></div>
+    <div class="stat"><span id="dueCount" class="stat-value">0</span><span class="stat-label">Due</span></div>
+    <div class="stat"><span id="newCount" class="stat-value">0</span><span class="stat-label">New</span></div>
+    <div class="stat"><span id="knownCount" class="stat-value">0</span><span class="stat-label">Reviewed</span></div>
+    <div class="stat"><span id="accuracyCount" class="stat-value">--</span><span class="stat-label">Session</span></div>
+  </section>
+
+  <main>
+    <div id="statusLine">No file loaded.</div>
+
+    <div class="topStats">
+      <div id="progress">Item: 0 / 0</div>
+      <div id="meta">Reps: 0, Interval: 0d</div>
+    </div>
+
+    <div id="word" class="word">漢字</div>
+
+    <input id="answer" type="text" placeholder="Type the reading in hiragana" autocomplete="off" autocapitalize="off" spellcheck="false">
+
+    <div class="row">
+      <button id="checkBtn" class="btn">Check</button>
+      <button id="showBtn" class="btn secondary">Show answer</button>
+      <button id="againBtn" class="btn secondary">Again</button>
+      <button id="nextBtn" class="btn secondary">Next</button>
+    </div>
+
+    <div id="feedback"></div>
+
+    <div id="details" hidden>
+      <div class="detail"><strong>Reading</strong><span id="reading"></span></div>
+      <div class="detail"><strong>Meaning</strong><span id="meaning"></span></div>
+      <div class="detail"><strong>Kanji meanings</strong><span id="kanjiMeanings"></span></div>
+    </div>
+
+    <div id="sessionStats"></div>
+    <div id="finalStats"></div>
+  </main>
+</div>
+
+<script>
+const MAX_REPS = 100;
+const HIRAGANA_RE = /[\u3040-\u309F]/;
+const KATAKANA_RE = /[\u30A0-\u30FF]/;
+const KANJI_RE = /[\u4E00-\u9FFF]/;
+
+const $ = id => document.getElementById(id);
+const els = {
+  csvFile: $("csvFile"),
+  startBtn: $("startBtn"),
+  resetBtn: $("resetProgressBtn"),
+  sessionLimit: $("sessionLimit"),
+  studyMode: $("studyMode"),
+  includeKanaOnly: $("includeKanaOnly"),
+  includeKatakana: $("includeKatakana"),
+  fileInfo: $("fileInfo"),
+  statusLine: $("statusLine"),
+  totalCount: $("totalCount"),
+  dueCount: $("dueCount"),
+  newCount: $("newCount"),
+  knownCount: $("knownCount"),
+  accuracyCount: $("accuracyCount"),
+  progress: $("progress"),
+  meta: $("meta"),
+  word: $("word"),
+  answer: $("answer"),
+  checkBtn: $("checkBtn"),
+  showBtn: $("showBtn"),
+  againBtn: $("againBtn"),
+  nextBtn: $("nextBtn"),
+  feedback: $("feedback"),
+  details: $("details"),
+  reading: $("reading"),
+  meaning: $("meaning"),
+  kanjiMeanings: $("kanjiMeanings"),
+  sessionStats: $("sessionStats"),
+  finalStats: $("finalStats")
+};
+
+class ItemProgress {
+  constructor({ reps = 0, ef = 2.5, interval_days = 0, due_date = "", lapses = 0 } = {}) {
+    this.reps = Number(reps) || 0;
+    this.ef = Number(ef) || 2.5;
+    this.interval_days = Number(interval_days) || 0;
+    this.due_date = due_date || "";
+    this.lapses = Number(lapses) || 0;
+  }
+
+  isNew() {
+    return this.reps === 0 && !this.due_date;
+  }
+
+  isDue(now = new Date()) {
+    if (this.isNew()) return true;
+    if (!this.due_date) return true;
+    return now >= new Date(this.due_date);
+  }
+
+  update(quality) {
+    if (this.reps >= MAX_REPS) return;
+    if (quality < 3) {
+      this.reps = 0;
+      this.interval_days = 1;
+      this.lapses += 1;
+    } else {
+      this.reps += 1;
+      if (this.reps === 1) this.interval_days = 1;
+      else if (this.reps === 2) this.interval_days = 4;
+      else this.interval_days = Math.max(1, Math.round(this.interval_days * this.ef));
+      this.ef = Math.max(1.3, this.ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
+    }
+    const next = new Date();
+    next.setDate(next.getDate() + this.interval_days);
+    this.due_date = next.toISOString();
+  }
+}
+
+let vocab = [];
+let currentSessionItems = [];
+let sessionIndex = 0;
+let hardItems = [];
+let repeatItems = [];
+let repeatNextRound = [];
+let inRepeatPhase = false;
+let repeatRound = 0;
+let currentFilename = "";
+let progressMap = {};
+let revealed = false;
+let firstResult = null;
+let currentCorrect = false;
+
+const stats = {
+  total: 0,
+  current: 0,
+  correct_first: 0,
+  reviews: 0,
+  quality_sum: 0,
+  repeatRounds: 0
+};
+
+function containsHiragana(text) { return HIRAGANA_RE.test(text || ""); }
+function containsKatakana(text) { return KATAKANA_RE.test(text || ""); }
+function containsKanji(text) { return KANJI_RE.test(text || ""); }
+
+function toHiragana(text) {
+  return (text || "").replace(/[\u30A1-\u30F6]/g, ch =>
+    String.fromCharCode(ch.charCodeAt(0) - 0x60)
+  );
+}
+
+function normalize(text) {
+  return toHiragana(text || "")
+    .normalize("NFKC")
+    .trim()
+    .replace(/[~〜～]/g, "")
+    .replace(/[・･\s]/g, "")
+    .replace(/[。、.，,]/g, "");
+}
+
+function splitReadingVariants(readingRaw) {
+  const stripped = (readingRaw || "").replace(/\([^)]*\)/g, "");
+  return stripped
+    .split(/[;；,、\/|]/)
+    .map(normalize)
+    .filter(Boolean);
+}
+
+function rowValue(row, name) {
+  const wanted = name.toLowerCase();
+  const key = Object.keys(row).find(k => k.trim().replace(/^\uFEFF/, "").toLowerCase() === wanted);
+  return key ? String(row[key] ?? "").trim() : "";
+}
+
+function progressKeyForFile(filename) {
+  return "jp_srs_progress_v3_" + filename;
+}
+
+function loadProgressMap(filename) {
+  const raw = localStorage.getItem(progressKeyForFile(filename));
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return Object.fromEntries(Object.entries(parsed).map(([id, data]) => [id, new ItemProgress(data)]));
+  } catch {
+    return {};
+  }
+}
+
+function saveProgressMap(filename, map) {
+  const saved = {};
+  for (const [id, progress] of Object.entries(map)) {
+    saved[id] = {
+      reps: progress.reps,
+      ef: progress.ef,
+      interval_days: progress.interval_days,
+      due_date: progress.due_date,
+      lapses: progress.lapses
+    };
+  }
+  localStorage.setItem(progressKeyForFile(filename), JSON.stringify(saved));
+}
+
+function shuffleInPlace(items) {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+}
+
+function buildVocabFromRows(rows) {
+  const items = [];
+  const kanjiDict = {};
+  const seenIds = new Set();
+  const counts = { missing: 0, duplicate: 0, filtered: 0 };
+
+  rows.forEach(row => {
+    const kanji = rowValue(row, "Kanji");
+    const meaning = rowValue(row, "KanjiMeaning");
+    if ([...kanji].length === 1 && meaning) kanjiDict[kanji] = meaning;
+  });
+
+  rows.forEach(row => {
+    const word = rowValue(row, "Kanji");
+    const readingRaw = rowValue(row, "Reading");
+    const meaning = rowValue(row, "Meaning");
+    const romaji = rowValue(row, "Romaji");
+    const variants = splitReadingVariants(readingRaw);
+
+    if (!word || !variants.length || !meaning) {
+      counts.missing += 1;
+      return;
+    }
+
+    const hasKatakana = containsKatakana(word) || containsKatakana(readingRaw);
+    const kanaOnly = containsHiragana(word) && !containsKanji(word);
+    if ((hasKatakana && !els.includeKatakana.checked) || (kanaOnly && !els.includeKanaOnly.checked)) {
+      counts.filtered += 1;
+      return;
+    }
+
+    const id = `${word}::${variants[0]}`;
+    if (seenIds.has(id)) {
+      counts.duplicate += 1;
+      return;
+    }
+    seenIds.add(id);
+
+    const kanjiMeanings = [...word]
+      .filter(ch => kanjiDict[ch])
+      .map(ch => `${ch}: ${kanjiDict[ch]}`);
+
+    const progress = progressMap[id] || new ItemProgress();
+    items.push({
+      id,
+      word,
+      reading: variants[0],
+      readings: variants,
+      readingDisplay: variants.join(" / "),
+      romaji,
+      meaning,
+      kanji_meanings: kanjiMeanings.join("; ") || "No kanji meanings in this CSV",
+      hasKatakana,
+      kanaOnly,
+      progress
+    });
+  });
+
+  const notes = [];
+  if (counts.filtered) notes.push(`${counts.filtered} filtered by settings`);
+  if (counts.duplicate) notes.push(`${counts.duplicate} duplicates skipped`);
+  if (counts.missing) notes.push(`${counts.missing} incomplete rows skipped`);
+  els.statusLine.textContent = `Loaded ${items.length} study cards.${notes.length ? " " + notes.join(", ") + "." : ""}`;
+  return items;
+}
+
+function resetStats() {
+  stats.total = 0;
+  stats.current = 0;
+  stats.correct_first = 0;
+  stats.reviews = 0;
+  stats.quality_sum = 0;
+  stats.repeatRounds = 0;
+  els.accuracyCount.textContent = "--";
+}
+
+function deckSummary() {
+  const now = new Date();
+  const total = vocab.length;
+  const due = vocab.filter(v => v.progress.isDue(now)).length;
+  const fresh = vocab.filter(v => v.progress.isNew()).length;
+  const reviewed = vocab.filter(v => v.progress.reps > 0 || v.progress.due_date).length;
+  els.totalCount.textContent = total;
+  els.dueCount.textContent = due;
+  els.newCount.textContent = fresh;
+  els.knownCount.textContent = reviewed;
+}
+
+function selectSessionItems() {
+  const limit = Math.max(5, Math.min(100, Number(els.sessionLimit.value) || 15));
+  const mode = els.studyMode.value;
+  const now = new Date();
+  let pool = vocab.slice();
+
+  if (mode === "due") pool = pool.filter(v => v.progress.isDue(now));
+  if (mode === "new") pool = pool.filter(v => v.progress.isNew());
+
+  pool.sort((a, b) => {
+    const ad = a.progress.due_date ? new Date(a.progress.due_date).getTime() : 0;
+    const bd = b.progress.due_date ? new Date(b.progress.due_date).getTime() : 0;
+    return ad - bd;
+  });
+
+  const overdue = pool.slice(0, Math.ceil(limit * .65));
+  const remaining = pool.slice(Math.ceil(limit * .65));
+  shuffleInPlace(remaining);
+  return overdue.concat(remaining).slice(0, limit);
+}
+
+function startSession() {
+  resetStats();
+  hardItems = [];
+  repeatItems = [];
+  repeatNextRound = [];
+  inRepeatPhase = false;
+  repeatRound = 0;
+  currentSessionItems = selectSessionItems();
+  sessionIndex = 0;
+  stats.total = currentSessionItems.length;
+  els.finalStats.textContent = "";
+  els.sessionStats.textContent = "";
+
+  if (!vocab.length) {
+    els.statusLine.textContent = "No vocab loaded.";
+  } else if (!currentSessionItems.length) {
+    els.statusLine.textContent = "No cards match the current study mode.";
+  } else {
+    els.statusLine.textContent = `Session started with ${stats.total} card${stats.total === 1 ? "" : "s"}.`;
+  }
+
+  renderCurrentItem();
+  renderProgress();
+  deckSummary();
+}
+
+function currentItem() {
+  return inRepeatPhase ? repeatItems[sessionIndex] || null : currentSessionItems[sessionIndex] || null;
+}
+
+function isAnswerCorrect(item, answer) {
+  const normalized = normalize(answer);
+  return item.readings.includes(normalized);
+}
+
+function clearCardState() {
+  revealed = false;
+  firstResult = null;
+  currentCorrect = false;
+  els.feedback.textContent = "";
+  els.feedback.className = "";
+  els.details.hidden = true;
+  els.answer.value = "";
+}
+
+function renderCurrentItem() {
+  clearCardState();
+  const item = currentItem();
+  if (!item) {
+    els.word.textContent = vocab.length ? "完了" : "漢字";
+    els.reading.textContent = "";
+    els.meaning.textContent = "";
+    els.kanjiMeanings.textContent = "";
+    els.answer.blur();
+    return;
+  }
+  els.word.textContent = item.word || item.readingDisplay;
+  els.reading.textContent = item.readingDisplay;
+  els.meaning.textContent = item.meaning;
+  els.kanjiMeanings.textContent = item.kanji_meanings;
+  els.answer.focus();
+}
+
+function renderProgress() {
+  const item = currentItem();
+  const total = inRepeatPhase ? repeatItems.length : stats.total;
+  const idx = item ? Math.min(sessionIndex + 1, total) : 0;
+  els.progress.textContent = inRepeatPhase
+    ? `Repeat round ${repeatRound}: ${idx} / ${total}`
+    : `Item: ${idx} / ${total}`;
+  els.meta.textContent = item
+    ? `Reps: ${item.progress.reps}, Interval: ${item.progress.interval_days}d, Lapses: ${item.progress.lapses}`
+    : "Reps: 0, Interval: 0d";
+
+  const avg = stats.reviews ? stats.quality_sum / stats.reviews : 0;
+  const attempted = stats.current || 0;
+  els.sessionStats.textContent =
+    `First-try: ${stats.correct_first}/${attempted} | Avg quality: ${avg.toFixed(1)} | Hard queue: ${hardItems.length + repeatNextRound.length}`;
+}
+
+function reveal(correct, message, tone = "") {
+  els.feedback.textContent = message;
+  els.feedback.className = tone || (correct ? "ok" : "bad");
+  els.details.hidden = false;
+  revealed = true;
+}
+
+function checkAnswer() {
+  const item = currentItem();
+  if (!item || revealed) return;
+  const answer = els.answer.value;
+  if (!normalize(answer)) return;
+  const correct = isAnswerCorrect(item, answer);
+  currentCorrect = correct;
+
+  if (!inRepeatPhase) {
+    firstResult = correct ? "pass" : "fail";
+    reveal(correct, correct ? "First-try correct" : `Wrong. Correct: ${item.readingDisplay}`);
+  } else {
+    reveal(correct, correct ? "Correct. This one leaves the repeat queue." : `Again. Correct: ${item.readingDisplay}`);
+  }
+}
+
+function showAnswer() {
+  const item = currentItem();
+  if (!item || revealed) return;
+  currentCorrect = false;
+  if (!inRepeatPhase) firstResult = "fail";
+  reveal(false, `Answer shown: ${item.readingDisplay}`, "warn");
+}
+
+function forceAgain() {
+  const item = currentItem();
+  if (!item) return;
+  currentCorrect = false;
+  if (!revealed) {
+    if (!inRepeatPhase) firstResult = "fail";
+    reveal(false, `Marked again. Correct: ${item.readingDisplay}`, "warn");
+  }
+}
+
+function finalizeMainCard() {
+  const item = currentItem();
+  if (!item) return;
+  const passed = firstResult === "pass";
+  const quality = passed ? 5 : 1;
+  if (passed) stats.correct_first += 1;
+  else hardItems.push(item);
+  item.progress.update(quality);
+  progressMap[item.id] = item.progress;
+  stats.current += 1;
+  stats.reviews += 1;
+  stats.quality_sum += quality;
+  saveProgressMap(currentFilename, progressMap);
+  deckSummary();
+}
+
+function finalizeRepeatCard() {
+  const item = currentItem();
+  if (!item) return;
+  if (!currentCorrect) repeatNextRound.push(item);
+}
+
+function finishSession(message) {
+  const accuracy = stats.total ? Math.round((stats.correct_first / stats.total) * 100) : 0;
+  els.accuracyCount.textContent = `${accuracy}%`;
+  els.statusLine.textContent = message;
+  els.finalStats.innerHTML =
+    `<strong>Session complete.</strong> First-try accuracy: ${stats.correct_first}/${stats.total} (${accuracy}%). ` +
+    `Reviews saved: ${stats.reviews}. Repeat rounds: ${stats.repeatRounds}.`;
+  currentSessionItems = [];
+  repeatItems = [];
+  inRepeatPhase = false;
+  sessionIndex = 0;
+  renderCurrentItem();
+  renderProgress();
+}
+
+function enterRepeatPhase() {
+  if (!hardItems.length) {
+    finishSession("Session finished. No hard cards to repeat.");
+    return;
+  }
+  inRepeatPhase = true;
+  repeatRound = 1;
+  stats.repeatRounds = 1;
+  repeatItems = hardItems.slice();
+  repeatNextRound = [];
+  hardItems = [];
+  sessionIndex = 0;
+  els.statusLine.textContent = `Repeating ${repeatItems.length} hard card${repeatItems.length === 1 ? "" : "s"} until correct.`;
+  renderCurrentItem();
+  renderProgress();
+}
+
+function advanceItem() {
+  if (!inRepeatPhase) {
+    if (sessionIndex < currentSessionItems.length - 1) {
+      sessionIndex += 1;
+      renderCurrentItem();
+      renderProgress();
+    } else {
+      enterRepeatPhase();
+    }
+    return;
+  }
+
+  if (sessionIndex < repeatItems.length - 1) {
+    sessionIndex += 1;
+    renderCurrentItem();
+    renderProgress();
+  } else if (repeatNextRound.length) {
+    repeatRound += 1;
+    stats.repeatRounds = repeatRound;
+    repeatItems = repeatNextRound.slice();
+    repeatNextRound = [];
+    sessionIndex = 0;
+    els.statusLine.textContent = `Repeat round ${repeatRound}: ${repeatItems.length} card${repeatItems.length === 1 ? "" : "s"} still need another pass.`;
+    renderCurrentItem();
+    renderProgress();
+  } else {
+    finishSession("All hard cards completed.");
+  }
+}
+
+function commitAndAdvance() {
+  if (!currentItem()) return;
+  if (!revealed) showAnswer();
+  if (!inRepeatPhase) finalizeMainCard();
+  else finalizeRepeatCard();
+  advanceItem();
+}
+
+function loadSelectedFile() {
+  const file = els.csvFile.files[0];
+  if (!file) {
+    alert("Select a CSV file first.");
+    return;
+  }
+  currentFilename = file.name;
+  progressMap = loadProgressMap(currentFilename);
+  els.fileInfo.textContent = file.name;
+  els.statusLine.textContent = "Parsing CSV...";
+  const finish = rows => {
+    vocab = buildVocabFromRows(rows);
+    deckSummary();
+    if (!vocab.length) {
+      renderCurrentItem();
+      renderProgress();
+      return;
+    }
+    startSession();
+  };
+
+  if (window.Papa) {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: results => finish(results.data),
+      error: err => { els.statusLine.textContent = `CSV parse failed: ${err.message}`; }
+    });
+  } else {
+    file.text().then(text => finish(parseCsvFallback(text)));
+  }
+}
+
+function parseCsvFallback(text) {
+  const rows = [];
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return rows;
+  const parseLine = line => {
+    const cells = [];
+    let cell = "";
+    let quoted = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && line[i + 1] === '"') {
+        cell += '"';
+        i += 1;
+      } else if (ch === '"') {
+        quoted = !quoted;
+      } else if (ch === "," && !quoted) {
+        cells.push(cell);
+        cell = "";
+      } else {
+        cell += ch;
+      }
+    }
+    cells.push(cell);
+    return cells;
+  };
+  const headers = parseLine(lines[0]).map(h => h.trim().replace(/^\uFEFF/, ""));
+  lines.slice(1).forEach(line => {
+    const cells = parseLine(line);
+    const row = {};
+    headers.forEach((header, idx) => row[header] = cells[idx] || "");
+    rows.push(row);
+  });
+  return rows;
+}
+
+els.startBtn.addEventListener("click", loadSelectedFile);
+els.studyMode.addEventListener("change", () => { if (vocab.length) startSession(); });
+els.sessionLimit.addEventListener("change", () => { if (vocab.length) startSession(); });
+els.includeKanaOnly.addEventListener("change", () => { if (currentFilename && els.csvFile.files[0]) loadSelectedFile(); });
+els.includeKatakana.addEventListener("change", () => { if (currentFilename && els.csvFile.files[0]) loadSelectedFile(); });
+
+els.resetBtn.addEventListener("click", () => {
+  if (!currentFilename) {
+    alert("No file loaded yet.");
+    return;
+  }
+  if (!confirm(`Reset all saved progress for ${currentFilename}?`)) return;
+  localStorage.removeItem(progressKeyForFile(currentFilename));
+  progressMap = {};
+  vocab.forEach(item => item.progress = new ItemProgress());
+  startSession();
+  els.statusLine.textContent = `Progress reset for ${currentFilename}.`;
+});
+
+els.checkBtn.addEventListener("click", checkAnswer);
+els.showBtn.addEventListener("click", showAnswer);
+els.againBtn.addEventListener("click", forceAgain);
+els.nextBtn.addEventListener("click", commitAndAdvance);
+
+els.answer.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  if (!revealed) checkAnswer();
+  else commitAndAdvance();
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter" || document.activeElement === els.answer || !revealed) return;
+  e.preventDefault();
+  commitAndAdvance();
+});
+
+renderCurrentItem();
+renderProgress();
+deckSummary();
+</script>
+</body>
+</html>
