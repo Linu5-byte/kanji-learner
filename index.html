@@ -468,6 +468,7 @@ let inRepeatPhase = false;
 let repeatRound = 0;
 let currentFilename = "";
 let progressMap = {};
+let completedThisRunIds = new Set();
 let revealed = false;
 let firstResult = null;
 let currentCorrect = false;
@@ -496,16 +497,22 @@ function normalize(text) {
     .normalize("NFKC")
     .trim()
     .replace(/[~〜～]/g, "")
+    .replace(/[()（）「」『』［］\[\]{}｛｝]/g, "")
     .replace(/[・･\s]/g, "")
     .replace(/[。、.，,]/g, "");
 }
 
 function splitReadingVariants(readingRaw) {
-  const stripped = (readingRaw || "").replace(/\([^)]*\)/g, "");
-  return stripped
+  const variants = new Set();
+  (readingRaw || "")
     .split(/[;；,、\/|]/)
-    .map(normalize)
-    .filter(Boolean);
+    .forEach(part => {
+      const withParentheticalText = normalize(part);
+      const withoutParentheticalText = normalize(part.replace(/[（(][^）)]*[）)]/g, ""));
+      if (withParentheticalText) variants.add(withParentheticalText);
+      if (withoutParentheticalText) variants.add(withoutParentheticalText);
+    });
+  return [...variants];
 }
 
 function rowValue(row, name) {
@@ -642,7 +649,7 @@ function selectSessionItems() {
   const limit = Math.max(5, Math.min(100, Number(els.sessionLimit.value) || 15));
   const mode = els.studyMode.value;
   const now = new Date();
-  let pool = vocab.slice();
+  let pool = vocab.filter(v => !completedThisRunIds.has(v.id));
 
   if (mode === "due") pool = pool.filter(v => v.progress.isDue(now));
   if (mode === "new") pool = pool.filter(v => v.progress.isNew());
@@ -789,6 +796,7 @@ function finalizeMainCard() {
   else hardItems.push(item);
   item.progress.update(quality);
   progressMap[item.id] = item.progress;
+  completedThisRunIds.add(item.id);
   stats.current += 1;
   stats.reviews += 1;
   stats.quality_sum += quality;
@@ -804,11 +812,15 @@ function finalizeRepeatCard() {
 
 function finishSession(message) {
   const accuracy = stats.total ? Math.round((stats.correct_first / stats.total) * 100) : 0;
+  const hasNextSession = selectSessionItems().length > 0;
   els.accuracyCount.textContent = `${accuracy}%`;
   els.statusLine.textContent = message;
   els.finalStats.innerHTML =
     `<strong>Session complete.</strong> First-try accuracy: ${stats.correct_first}/${stats.total} (${accuracy}%). ` +
-    `Reviews saved: ${stats.reviews}. Repeat rounds: ${stats.repeatRounds}.`;
+    `Reviews saved: ${stats.reviews}. Repeat rounds: ${stats.repeatRounds}.` +
+    (hasNextSession
+      ? `<div class="row"><span>Continue?</span><button id="continueSessionBtn" class="btn">Yes</button></div>`
+      : `<div>No more cards match the current study mode.</div>`);
   currentSessionItems = [];
   repeatItems = [];
   inRepeatPhase = false;
@@ -883,6 +895,7 @@ function loadSelectedFile() {
   els.fileInfo.textContent = file.name;
   els.statusLine.textContent = "Parsing CSV...";
   const finish = rows => {
+    completedThisRunIds = new Set();
     vocab = buildVocabFromRows(rows);
     deckSummary();
     if (!vocab.length) {
@@ -941,8 +954,18 @@ function parseCsvFallback(text) {
 }
 
 els.startBtn.addEventListener("click", loadSelectedFile);
-els.studyMode.addEventListener("change", () => { if (vocab.length) startSession(); });
-els.sessionLimit.addEventListener("change", () => { if (vocab.length) startSession(); });
+els.studyMode.addEventListener("change", () => {
+  if (vocab.length) {
+    completedThisRunIds = new Set();
+    startSession();
+  }
+});
+els.sessionLimit.addEventListener("change", () => {
+  if (vocab.length) {
+    completedThisRunIds = new Set();
+    startSession();
+  }
+});
 els.includeKanaOnly.addEventListener("change", () => { if (currentFilename && els.csvFile.files[0]) loadSelectedFile(); });
 els.includeKatakana.addEventListener("change", () => { if (currentFilename && els.csvFile.files[0]) loadSelectedFile(); });
 
@@ -954,6 +977,7 @@ els.resetBtn.addEventListener("click", () => {
   if (!confirm(`Reset all saved progress for ${currentFilename}?`)) return;
   localStorage.removeItem(progressKeyForFile(currentFilename));
   progressMap = {};
+  completedThisRunIds = new Set();
   vocab.forEach(item => item.progress = new ItemProgress());
   startSession();
   els.statusLine.textContent = `Progress reset for ${currentFilename}.`;
@@ -963,6 +987,9 @@ els.checkBtn.addEventListener("click", checkAnswer);
 els.showBtn.addEventListener("click", showAnswer);
 els.againBtn.addEventListener("click", forceAgain);
 els.nextBtn.addEventListener("click", commitAndAdvance);
+els.finalStats.addEventListener("click", e => {
+  if (e.target && e.target.id === "continueSessionBtn") startSession();
+});
 
 els.answer.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
