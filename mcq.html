@@ -256,6 +256,15 @@
       vertical-align: middle;
     }
 
+    #nextBtn {
+      display: block;
+      width: 100%;
+      min-height: 64px;
+      margin-top: 12px;
+      border-radius: 12px;
+      font-size: clamp(20px, 3vw, 28px);
+    }
+
     .row {
       display: flex;
       flex-wrap: wrap;
@@ -358,10 +367,11 @@
 
     <div id="choices"></div>
 
+    <button id="nextBtn" class="btn">Next</button>
+
     <div class="row">
       <button id="showBtn" class="btn secondary">Show answer</button>
       <button id="againBtn" class="btn secondary">Again</button>
-      <button id="nextBtn" class="btn secondary">Next</button>
     </div>
 
     <div id="feedback"></div>
