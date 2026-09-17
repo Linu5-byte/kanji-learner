@@ -48,10 +48,6 @@
     }
 
     header {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 16px;
-      align-items: start;
       padding: 22px 24px 16px;
       border-bottom: 1px solid var(--border);
     }
@@ -74,8 +70,12 @@
       grid-template-columns: minmax(240px, 1fr) auto;
       gap: 14px;
       padding: 16px 24px;
-      border-bottom: 1px solid var(--border);
+      border-top: 1px solid var(--border);
       background: rgba(255,255,255,.58);
+    }
+
+    .bottom-bar {
+      padding: 16px 24px 22px;
     }
 
     .file-block, .settings {
@@ -143,6 +143,7 @@
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 1px;
       background: var(--border);
+      border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
     }
 
@@ -318,11 +319,11 @@
 
     @media (max-width: 860px) {
       body { padding: 12px; }
-      header, .toolbar {
-        grid-template-columns: 1fr;
+      header, .toolbar, .bottom-bar {
         padding-left: 16px;
         padding-right: 16px;
       }
+      .toolbar { grid-template-columns: 1fr; }
       .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       main { padding: 16px; }
       #details { grid-template-columns: 1fr; }
@@ -341,12 +342,47 @@
 <body>
 <div class="app">
   <header>
-    <div>
-      <h1>Japanese SRS Trainer — Multiple Choice</h1>
-      <div class="muted">Load one of your CSV files, pick the correct reading, then press Enter. Missed cards repeat until they stick.</div>
-    </div>
-    <button id="resetProgressBtn" class="btn danger">Reset file progress</button>
+    <h1>Japanese SRS Trainer — Multiple Choice</h1>
+    <div class="muted">Load one of your CSV files, pick the correct reading, then press Enter. Missed cards repeat until they stick.</div>
   </header>
+
+  <main>
+    <div id="statusLine">No file loaded.</div>
+
+    <div class="topStats">
+      <div id="progress">Item: 0 / 0</div>
+      <div id="meta">Reps: 0, Interval: 0d</div>
+    </div>
+
+    <div id="word" class="word">漢字</div>
+
+    <div id="choices"></div>
+
+    <div class="row">
+      <button id="showBtn" class="btn secondary">Show answer</button>
+      <button id="againBtn" class="btn secondary">Again</button>
+      <button id="nextBtn" class="btn secondary">Next</button>
+    </div>
+
+    <div id="feedback"></div>
+
+    <div id="details" hidden>
+      <div class="detail"><strong>Reading</strong><span id="reading"></span></div>
+      <div class="detail"><strong>Meaning</strong><span id="meaning"></span></div>
+      <div class="detail"><strong>Kanji meanings</strong><span id="kanjiMeanings"></span></div>
+    </div>
+
+    <div id="sessionStats"></div>
+    <div id="finalStats"></div>
+  </main>
+
+  <section class="stats-grid" aria-label="Deck summary">
+    <div class="stat"><span id="totalCount" class="stat-value">0</span><span class="stat-label">Loaded</span></div>
+    <div class="stat"><span id="dueCount" class="stat-value">0</span><span class="stat-label">Due</span></div>
+    <div class="stat"><span id="newCount" class="stat-value">0</span><span class="stat-label">New</span></div>
+    <div class="stat"><span id="knownCount" class="stat-value">0</span><span class="stat-label">Reviewed</span></div>
+    <div class="stat"><span id="accuracyCount" class="stat-value">--</span><span class="stat-label">Session</span></div>
+  </section>
 
   <section class="toolbar" aria-label="File and study settings">
     <div class="file-block">
@@ -379,43 +415,9 @@
     </div>
   </section>
 
-  <section class="stats-grid" aria-label="Deck summary">
-    <div class="stat"><span id="totalCount" class="stat-value">0</span><span class="stat-label">Loaded</span></div>
-    <div class="stat"><span id="dueCount" class="stat-value">0</span><span class="stat-label">Due</span></div>
-    <div class="stat"><span id="newCount" class="stat-value">0</span><span class="stat-label">New</span></div>
-    <div class="stat"><span id="knownCount" class="stat-value">0</span><span class="stat-label">Reviewed</span></div>
-    <div class="stat"><span id="accuracyCount" class="stat-value">--</span><span class="stat-label">Session</span></div>
-  </section>
-
-  <main>
-    <div id="statusLine">No file loaded.</div>
-
-    <div class="topStats">
-      <div id="progress">Item: 0 / 0</div>
-      <div id="meta">Reps: 0, Interval: 0d</div>
-    </div>
-
-    <div id="word" class="word">漢字</div>
-
-    <div id="choices"></div>
-
-    <div class="row">
-      <button id="showBtn" class="btn secondary">Show answer</button>
-      <button id="againBtn" class="btn secondary">Again</button>
-      <button id="nextBtn" class="btn secondary">Next</button>
-    </div>
-
-    <div id="feedback"></div>
-
-    <div id="details" hidden>
-      <div class="detail"><strong>Reading</strong><span id="reading"></span></div>
-      <div class="detail"><strong>Meaning</strong><span id="meaning"></span></div>
-      <div class="detail"><strong>Kanji meanings</strong><span id="kanjiMeanings"></span></div>
-    </div>
-
-    <div id="sessionStats"></div>
-    <div id="finalStats"></div>
-  </main>
+  <div class="bottom-bar">
+    <button id="resetProgressBtn" class="btn danger">Reset file progress</button>
+  </div>
 </div>
 
 <script>
