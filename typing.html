@@ -1019,6 +1019,7 @@ els.anotherRoundBtn.addEventListener("click", startSession);
 els.answer.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
   e.preventDefault();
+  e.stopPropagation();
   if (!currentItem()) {
     tryContinueSession();
     return;

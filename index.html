@@ -1005,6 +1005,7 @@ els.finalStats.addEventListener("click", e => {
 els.answer.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
   e.preventDefault();
+  e.stopPropagation();
   if (!currentItem()) {
     tryContinueSession();
     return;
