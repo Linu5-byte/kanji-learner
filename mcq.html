@@ -195,6 +195,14 @@
       overflow-wrap: anywhere;
     }
 
+    .gate-prompt {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+    }
+
     #choices {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -348,11 +356,13 @@
 
     <div id="word" class="word">漢字</div>
 
+    <div id="gatePrompt" class="gate-prompt" hidden>Do you know this word?</div>
+
     <div id="choices"></div>
 
-    <button id="nextBtn" class="btn">Next</button>
+    <button id="nextBtn" class="btn" hidden>Next</button>
 
-    <div class="row">
+    <div class="row" id="actionRow" hidden>
       <button id="showBtn" class="btn secondary">Show answer</button>
       <button id="againBtn" class="btn secondary">Again</button>
     </div>
@@ -439,7 +449,9 @@ const els = {
   progress: $("progress"),
   meta: $("meta"),
   word: $("word"),
+  gatePrompt: $("gatePrompt"),
   choices: $("choices"),
+  actionRow: $("actionRow"),
   showBtn: $("showBtn"),
   againBtn: $("againBtn"),
   nextBtn: $("nextBtn"),
@@ -501,6 +513,7 @@ let repeatRound = 0;
 let currentFilename = "";
 let progressMap = {};
 let completedThisRunIds = new Set();
+let askedIds = new Set();
 let revealed = false;
 let firstResult = null;
 let currentCorrect = false;
@@ -706,6 +719,7 @@ function startSession() {
   repeatNextRound = [];
   inRepeatPhase = false;
   repeatRound = 0;
+  askedIds = new Set();
   currentSessionItems = selectSessionItems();
   sessionIndex = 0;
   stats.total = currentSessionItems.length;
@@ -766,6 +780,9 @@ function clearCardState() {
   els.feedback.className = "";
   els.details.hidden = true;
   els.choices.innerHTML = "";
+  els.gatePrompt.hidden = true;
+  els.nextBtn.hidden = true;
+  els.actionRow.hidden = true;
 }
 
 function renderChoices(item) {
@@ -779,6 +796,41 @@ function renderChoices(item) {
     btn.addEventListener("click", () => selectChoice(idx));
     els.choices.appendChild(btn);
   });
+}
+
+function startQuiz(item) {
+  renderChoices(item);
+  els.nextBtn.hidden = false;
+  els.actionRow.hidden = false;
+}
+
+function renderGate(item) {
+  els.gatePrompt.hidden = false;
+  els.choices.innerHTML = "";
+  const yesBtn = document.createElement("button");
+  yesBtn.className = "choice-btn";
+  yesBtn.textContent = "Yes";
+  yesBtn.addEventListener("click", () => resolveGate(item, true));
+  const noBtn = document.createElement("button");
+  noBtn.className = "choice-btn";
+  noBtn.textContent = "No";
+  noBtn.addEventListener("click", () => resolveGate(item, false));
+  els.choices.appendChild(yesBtn);
+  els.choices.appendChild(noBtn);
+}
+
+function resolveGate(item, knowsIt) {
+  askedIds.add(item.id);
+  els.gatePrompt.hidden = true;
+  els.choices.innerHTML = "";
+  if (knowsIt) {
+    startQuiz(item);
+    return;
+  }
+  currentCorrect = false;
+  if (!inRepeatPhase) firstResult = "fail";
+  reveal(false, `Marked as not known. Correct: ${item.readingDisplay}`, "warn");
+  els.nextBtn.hidden = false;
 }
 
 function renderCurrentItem() {
@@ -795,7 +847,12 @@ function renderCurrentItem() {
   els.reading.textContent = item.readingDisplay;
   els.meaning.textContent = item.meaning;
   els.kanjiMeanings.textContent = item.kanji_meanings;
-  renderChoices(item);
+
+  if (askedIds.has(item.id)) {
+    startQuiz(item);
+  } else {
+    renderGate(item);
+  }
 }
 
 function renderProgress() {
