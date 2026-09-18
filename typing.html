@@ -46,10 +46,6 @@
     }
 
     header {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 16px;
-      align-items: start;
       padding: 22px 24px 16px;
       border-bottom: 1px solid var(--border);
     }
@@ -72,8 +68,12 @@
       grid-template-columns: minmax(240px, 1fr) auto;
       gap: 14px;
       padding: 16px 24px;
-      border-bottom: 1px solid var(--border);
+      border-top: 1px solid var(--border);
       background: rgba(255,255,255,.58);
+    }
+
+    .bottom-bar {
+      padding: 16px 24px 22px;
     }
 
     .file-block, .settings {
@@ -142,6 +142,7 @@
       gap: 1px;
       background: var(--border);
       border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
     }
 
     .stat {
@@ -284,11 +285,11 @@
 
     @media (max-width: 860px) {
       body { padding: 12px; }
-      header, .toolbar {
-        grid-template-columns: 1fr;
+      header, .toolbar, .bottom-bar {
         padding-left: 16px;
         padding-right: 16px;
       }
+      .toolbar { grid-template-columns: 1fr; }
       .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       main { padding: 16px; }
       #details { grid-template-columns: 1fr; }
@@ -306,40 +307,9 @@
 <body>
 <div class="app">
   <header>
-    <div>
-      <h1>Japanese SRS Trainer</h1>
-      <div class="muted">Load one of your CSV files, type the reading, then press Enter. Missed cards repeat until they stick.</div>
-    </div>
-    <button id="resetProgressBtn" class="btn danger">Reset file progress</button>
+    <h1>Japanese SRS Trainer</h1>
+    <div class="muted">Load one of your CSV files, type the reading, then press Enter. Missed cards repeat until they stick.</div>
   </header>
-
-  <section class="toolbar" aria-label="File and study settings">
-    <div class="file-block">
-      <input id="csvFile" type="file" accept=".csv,text/csv">
-      <button id="startBtn" class="btn">Load CSV</button>
-      <span id="fileInfo" class="muted"></span>
-    </div>
-    <div class="settings">
-      <label>Session
-        <input id="sessionLimit" type="number" min="5" max="100" step="5" value="15">
-      </label>
-      <label>Study
-        <select id="studyMode">
-          <option value="due">Due cards</option>
-          <option value="all">All cards</option>
-          <option value="new">New cards</option>
-        </select>
-      </label>
-      <label>
-        <input id="includeKanaOnly" type="checkbox" checked>
-        Kana-only words
-      </label>
-      <label>
-        <input id="includeKatakana" type="checkbox">
-        Katakana words
-      </label>
-    </div>
-  </section>
 
   <main>
     <div id="statusLine">No file loaded.</div>
@@ -379,6 +349,38 @@
     <div class="stat"><span id="knownCount" class="stat-value">0</span><span class="stat-label">Reviewed</span></div>
     <div class="stat"><span id="accuracyCount" class="stat-value">--</span><span class="stat-label">Session</span></div>
   </section>
+
+  <section class="toolbar" aria-label="File and study settings">
+    <div class="file-block">
+      <input id="csvFile" type="file" accept=".csv,text/csv">
+      <button id="startBtn" class="btn">Load CSV</button>
+      <span id="fileInfo" class="muted"></span>
+    </div>
+    <div class="settings">
+      <label>Session
+        <input id="sessionLimit" type="number" min="5" max="100" step="5" value="15">
+      </label>
+      <label>Study
+        <select id="studyMode">
+          <option value="due">Due cards</option>
+          <option value="all">All cards</option>
+          <option value="new">New cards</option>
+        </select>
+      </label>
+      <label>
+        <input id="includeKanaOnly" type="checkbox" checked>
+        Kana-only words
+      </label>
+      <label>
+        <input id="includeKatakana" type="checkbox">
+        Katakana words
+      </label>
+    </div>
+  </section>
+
+  <div class="bottom-bar">
+    <button id="resetProgressBtn" class="btn danger">Reset file progress</button>
+  </div>
 </div>
 
 <script>
