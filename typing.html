@@ -222,6 +222,14 @@
       box-shadow: 0 0 0 4px var(--accent-soft);
     }
 
+    #anotherRoundBtn {
+      display: block;
+      width: 100%;
+      min-height: 66px;
+      border-radius: 12px;
+      font-size: clamp(20px, 3.5vw, 32px);
+    }
+
     .row {
       display: flex;
       flex-wrap: wrap;
@@ -323,7 +331,9 @@
 
     <input id="answer" type="text" placeholder="Type the reading in hiragana" autocomplete="off" autocapitalize="off" spellcheck="false">
 
-    <div class="row">
+    <button id="anotherRoundBtn" class="btn" hidden>Another round</button>
+
+    <div class="row" id="answerRow">
       <button id="checkBtn" class="btn">Check</button>
       <button id="showBtn" class="btn secondary">Show answer</button>
       <button id="againBtn" class="btn secondary">Again</button>
@@ -409,6 +419,8 @@ const els = {
   meta: $("meta"),
   word: $("word"),
   answer: $("answer"),
+  answerRow: $("answerRow"),
+  anotherRoundBtn: $("anotherRoundBtn"),
   checkBtn: $("checkBtn"),
   showBtn: $("showBtn"),
   againBtn: $("againBtn"),
@@ -680,6 +692,9 @@ function startSession() {
   stats.total = currentSessionItems.length;
   els.finalStats.textContent = "";
   els.sessionStats.textContent = "";
+  els.answer.hidden = false;
+  els.answerRow.hidden = false;
+  els.anotherRoundBtn.hidden = true;
 
   if (!vocab.length) {
     els.statusLine.textContent = "No vocab loaded.";
@@ -817,21 +832,20 @@ function finalizeRepeatCard() {
 
 function finishSession(message) {
   const accuracy = stats.total ? Math.round((stats.correct_first / stats.total) * 100) : 0;
-  const hasNextSession = selectSessionItems().length > 0;
   els.accuracyCount.textContent = `${accuracy}%`;
   els.statusLine.textContent = message;
   els.finalStats.innerHTML =
     `<strong>Session complete.</strong> First-try accuracy: ${stats.correct_first}/${stats.total} (${accuracy}%). ` +
-    `Reviews saved: ${stats.reviews}. Repeat rounds: ${stats.repeatRounds}.` +
-    (hasNextSession
-      ? `<div class="row"><span>Continue?</span><button id="continueSessionBtn" class="btn">Yes</button></div>`
-      : `<div>No more cards match the current study mode.</div>`);
+    `Reviews saved: ${stats.reviews}. Repeat rounds: ${stats.repeatRounds}.`;
   currentSessionItems = [];
   repeatItems = [];
   inRepeatPhase = false;
   sessionIndex = 0;
   renderCurrentItem();
   renderProgress();
+  els.answer.hidden = true;
+  els.answerRow.hidden = true;
+  els.anotherRoundBtn.hidden = false;
 }
 
 function enterRepeatPhase() {
@@ -989,7 +1003,7 @@ els.resetBtn.addEventListener("click", () => {
 });
 
 function tryContinueSession() {
-  if (document.getElementById("continueSessionBtn")) {
+  if (!els.anotherRoundBtn.hidden) {
     startSession();
     return true;
   }
@@ -1000,9 +1014,7 @@ els.checkBtn.addEventListener("click", checkAnswer);
 els.showBtn.addEventListener("click", showAnswer);
 els.againBtn.addEventListener("click", forceAgain);
 els.nextBtn.addEventListener("click", commitAndAdvance);
-els.finalStats.addEventListener("click", e => {
-  if (e.target && e.target.id === "continueSessionBtn") startSession();
-});
+els.anotherRoundBtn.addEventListener("click", startSession);
 
 els.answer.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
