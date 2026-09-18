@@ -757,7 +757,10 @@ function checkAnswer() {
   const item = currentItem();
   if (!item || revealed) return;
   const answer = els.answer.value;
-  if (!normalize(answer)) return;
+  if (!normalize(answer)) {
+    showAnswer();
+    return;
+  }
   const correct = isAnswerCorrect(item, answer);
   currentCorrect = correct;
 
@@ -983,6 +986,14 @@ els.resetBtn.addEventListener("click", () => {
   els.statusLine.textContent = `Progress reset for ${currentFilename}.`;
 });
 
+function tryContinueSession() {
+  if (document.getElementById("continueSessionBtn")) {
+    startSession();
+    return true;
+  }
+  return false;
+}
+
 els.checkBtn.addEventListener("click", checkAnswer);
 els.showBtn.addEventListener("click", showAnswer);
 els.againBtn.addEventListener("click", forceAgain);
@@ -994,12 +1005,22 @@ els.finalStats.addEventListener("click", e => {
 els.answer.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
   e.preventDefault();
+  if (!currentItem()) {
+    tryContinueSession();
+    return;
+  }
   if (!revealed) checkAnswer();
   else commitAndAdvance();
 });
 
 document.addEventListener("keydown", e => {
-  if (e.key !== "Enter" || document.activeElement === els.answer || !revealed) return;
+  if (e.key !== "Enter" || document.activeElement === els.answer) return;
+  if (!currentItem()) {
+    e.preventDefault();
+    tryContinueSession();
+    return;
+  }
+  if (!revealed) return;
   e.preventDefault();
   commitAndAdvance();
 });
